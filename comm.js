@@ -25,8 +25,10 @@ Comm.prototype.setup = function(initd) {
     self.sequence = 0
     self.callbackd = {}
 
+    // console.log("HERE:A", initd)
+
     carrier.carry(self.program.stdout, function(line) {
-        // console.log('stdout: ' + line);
+        console.log('- stdout: ' + line);
         var parts = line.split(",")
         if (parts.length < 2) {
             return
@@ -40,7 +42,7 @@ Comm.prototype.setup = function(initd) {
         if (parts[1] == "-1") {
             delete self.callbackd[parts[0]]
         } else {
-            paramd.callback(paramd.pin, parts[1])
+            paramd.callback(paramd.pin, parseInt(parts[1]))
         }
     });
     carrier.carry(self.program.stderr, function(line) {
@@ -50,10 +52,9 @@ Comm.prototype.setup = function(initd) {
 
 Comm.prototype.digital_write = function(pin, value) {
     this.send({
-        command: "DigitalWeite",
+        command: "DigitalWrite",
         pin: pin,
-        value: value,
-        callback: callback
+        value: value
     })
 }
 
@@ -97,6 +98,7 @@ Comm.prototype.send = function(paramd) {
     }
     line += "\n"
 
+    console.log("- send", "seq=" + s)
     self.program.stdin.write(line)
 }
 

@@ -52,6 +52,7 @@ class CommPiFace(comm.Comm):
                 self.listener.register(pin, pifacedigitalio.IODIR_OFF, self._event)
 
             self.listener.activate()
+            return ""
         else:
             raise KeyError("unknown command: %s" % command)
             
