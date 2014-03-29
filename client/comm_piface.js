@@ -20,26 +20,3 @@ var CommPiFace = function() {
 CommPiFace.prototype = new comm.Comm;
 
 exports.CommPiFace = CommPiFace
-
-var led = 0
-var on = 1
-
-if (1) {
-    var comm = new CommPiFace()
-
-    // comm.digital_write(1, 1)
-    // comm.digital_write(2, 1)
-    comm.digital_listen(0, function(pin, value) {
-        console.log("+ result", pin, value)
-        if (!value) {
-            return
-        }
-
-        comm.digital_write(led++, on)
-        if (led == 8) {
-            led = 0
-            on = on ? 0 : 1
-        }
-    })
-}
-

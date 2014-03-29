@@ -20,12 +20,3 @@ var CommTest = function() {
 CommTest.prototype = new comm.Comm;
 
 exports.CommTest = CommTest
-
-if (1) {
-    var comm = new CommTest()
-
-    comm.digital_listen(1, function(pin, value) {
-        console.log("+ result", pin, value)
-    })
-}
-
