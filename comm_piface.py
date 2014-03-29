@@ -76,18 +76,5 @@ class CommPiFace(comm.Comm):
 if __name__ == '__main__':
     comm = CommPiFace(verbose=True)
 
-    """
-    def switch_pressed(event):
-        comm.send(event.pin_num, 1)
-
-    def switch_unpressed(event):
-        comm.send(event.pin_num, 0)
-
-    for i in range(4):
-        listener.register(i, pifacedigitalio.IODIR_ON, switch_pressed)
-        listener.register(i, pifacedigitalio.IODIR_OFF, switch_unpressed)
-    listener.activate()
-    """
-
     print("comm_piface: starting", file=sys.stderr)
     comm.run()
