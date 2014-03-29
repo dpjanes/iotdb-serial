@@ -66,6 +66,7 @@ class Comm(object):
                         if self.sends:
                             send = self.sends.pop()
                             self.cout.write(send + "\n")
+                            self.cout.flush()
                     elif fileno == self.cin.fileno():
                         self._process_input(self.cin.readline())
                     else:

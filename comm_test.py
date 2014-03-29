@@ -49,10 +49,12 @@ class CommTest(comm.Comm):
             if self.do_timer == False:
                 self.do_timer = True
                 self.timer()
+
+            return ""
         else:
             raise KeyError("unknown command: %s" % command)
             
-        print ("comm_piface.receive: seq=%s comm=%s" % ( sequence, command ), file=sys.stderr)
+        print ("comm_test.receive: seq=%s comm=%s" % ( sequence, command ), file=sys.stderr)
 
     def stop(self):
         pass
