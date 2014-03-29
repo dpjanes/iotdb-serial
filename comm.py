@@ -54,7 +54,7 @@ class Comm(object):
                     ts = self.poll.poll()
                 except KeyboardInterrupt:
                     if self.verbose:
-                        print("comm: caught Interrupt! [1]", file=sys.stderr)
+                        pass ## print("comm: caught Interrupt! [1]", file=sys.stderr)
 
                     continue
                 finally:
