@@ -44,7 +44,6 @@ For example, set Pin 10 to "on":
 
     909,DigitalWrite,10,1
 
-
 Read Pin 8
 
     910,DigitalRead,8
@@ -59,4 +58,25 @@ Responses are in the format
 
     <seq>,<result>
 
-If the result is "-", no further results are expected. 
+If the result is "-", no further results are expected for that sequence number
+
+For the Set 10 on example above:
+
+    909,-
+
+For the read Pin 8 example above (it's off). 
+
+    910,0
+
+For the notification on Pin 9 example above. The first response
+is just acking that the command was received. The following respones
+are based on the value changes over time. These do not need to come
+in all together and may be intersperced with other results and requests
+
+    911,
+    911,1
+    911,0
+    911,1
+    911,0
+    911,1
+
