@@ -21,12 +21,12 @@ var Comm = function() {
 Comm.prototype.setup = function(initd) {
     var self = this;
 
-    self.program = spawn('python', [ 'comm_test.py' ]);
+    self.program = spawn(initd.program, initd.av)
     self.sequence = 0
     self.callbackd = {}
 
     carrier.carry(self.program.stdout, function(line) {
-        console.log('stdout: ' + line);
+        // console.log('stdout: ' + line);
         var parts = line.split(",")
         if (parts.length < 2) {
             return
@@ -44,9 +44,35 @@ Comm.prototype.setup = function(initd) {
         }
     });
     carrier.carry(self.program.stderr, function(line) {
-        console.log('stderr: ' + line);
+        console.log('- stderr: ' + line);
     });
 }
+
+Comm.prototype.digital_write = function(pin, value) {
+    this.send({
+        command: "DigitalWeite",
+        pin: pin,
+        value: value,
+        callback: callback
+    })
+}
+
+Comm.prototype.digital_read = function(pin, callback) {
+    this.send({
+        command: "DigitalRead",
+        pin: pin,
+        callback: callback
+    })
+}
+
+Comm.prototype.digital_listen = function(pin, callback) {
+    this.send({
+        command: "DigitalListen",
+        pin: pin,
+        callback: callback
+    })
+}
+
 
 Comm.prototype.send = function(paramd) {
     var self = this;
