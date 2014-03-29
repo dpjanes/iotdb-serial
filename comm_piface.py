@@ -33,13 +33,13 @@ class CommPiFace(comm.Comm):
 
     def receive(self, sequence, command, *av):
         if command == "DigitalWrite":
-            pin, value, *xv = av
+            pin, value = av[0], av[1]
             pifacedigitalio.digital_write(pin, value and 1 or 0, self.board)
         elif command == "DigitalRead":
-            pin, *xv = av
+            pin = av[0]
             return pifacedigitalio.digital_read(pin, self.board)
         elif command == "DigitalListen":
-            pin, *xv = av
+            pin = av[0]
             self.listensd.setdefault(pin, set()).add(sequence)
 
             if self.listener:
