@@ -3,6 +3,15 @@ iotdb-serial
 
 Serial line oriented protocol for controlling GPIO on Raspberry Pi, Arduino, etc.
 
+## Why do this?
+
+Reading, writing and listening to pins on microdevices is a very common activity.
+It's also surprisingly touchy to do in some languages (Node) or just kinda annoying
+(such as in Wiring on Arduino) if you're used to major languages.
+
+We abstract out general IO operations, wrap them up in a TTY / serial port oriented
+protocol, and then it's easily bridged to the language of your choice.
+
 # Directories
 ## Client
 
