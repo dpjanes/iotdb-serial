@@ -3,27 +3,26 @@ iotdb-serial
 
 Serial line oriented protocol for controlling GPIO on Raspberry Pi, Arduino, etc.
 
-= Directories
-== Client
+# Directories
+## Client
 
 This is the code you're probably most interested in. When you're using the 
 clients it looks like you're directly interacting with GPIO. In fact, you're going
 through a line-oriented serial protocol that 
 
-== Server
+## Server
 
 The fun code that does all the work. The client code knows what to run. You can
 run these up by hand for fun and type commands 
 
-== Samples
+## Samples
 
 Sample Node code
 
-= Protocol
+# Protocol
 
 The inspiration for this is based on this code, which we hope to be compatible with
 https://sites.google.com/site/robertovalgolio/sistemi-programmi/arduino-serial-protocol
-
 
 Requests and responses are one per line, and data bits are separated by commas. There
 is no backslashing or anything allowed or needed.
@@ -35,7 +34,7 @@ increasing numbers is the best way to go about this.
 
 We're mosly set up to deal with Integer data but this may be extended to 
 
-== Requests
+## Requests
 
 Requests are in the format
 
@@ -54,7 +53,7 @@ Tell me all changes to Pin 9
 
     911,DigitalListen,9
 
-== Response
+## Response
 
 Responses are in the format
 
