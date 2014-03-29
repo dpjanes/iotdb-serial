@@ -13,7 +13,7 @@ var comm = require("./comm")
 var CommTest = function() {
     this.setup({
         program: "python",
-        av: [ "comm_test.py", ]
+        av: [ "../server/comm_test.py", ]
     })
 }
 

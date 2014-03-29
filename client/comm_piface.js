@@ -13,7 +13,7 @@ var comm = require("./comm")
 var CommPiFace = function() {
     this.setup({
         program: "python3",
-        av: [ "comm_piface.py", ]
+        av: [ "../server/comm_piface.py", ]
     })
 }
 
