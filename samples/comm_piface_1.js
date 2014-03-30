@@ -1,5 +1,5 @@
 /*
- *  comm_piface.js
+ *  comm_piface_1.js
  *
  *  David Janes
  *  IOTDB.org

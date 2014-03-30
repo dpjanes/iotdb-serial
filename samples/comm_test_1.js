@@ -1,5 +1,5 @@
 /*
- *  comm_test_1.js
+ *  comm_tty_1.js
  *
  *  David Janes
  *  IOTDB.org
