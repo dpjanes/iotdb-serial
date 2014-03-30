@@ -77,6 +77,7 @@ class Comm(object):
             except KeyboardInterrupt:
                 print("comm: caught Interrupt! [2]", file=sys.stderr)
 
+        self.stop()
         print("comm: finished comm loop", file=sys.stderr)
 
     def send(self, sequence, value, *av):
@@ -88,7 +89,10 @@ class Comm(object):
             os.kill(os.getpid(), 2)
 
     def receive(self, sequence, command, *av):
-        """Redefine me in subclasses"""
+        """Called when a new message received - Redefine me in subclasses"""
+
+    def stop(self):
+        """Called when stopped - Redefine me in subclasses"""
 
     def _process_input(self, line):
         if self.verbose:
@@ -96,7 +100,6 @@ class Comm(object):
 
         if line == "":
             self.quit = True
-            self.stop()
             return
 
         parts = line.split(",")
