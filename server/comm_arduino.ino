@@ -64,11 +64,14 @@ unsigned long  csvFrequency = 1;
 
 const int baud_rate = 9600;  // also good: 57600; 115200
 
-const int max_pins = 48;
-char pin_setup[max_pins];
+// --- setup section
+
+const int max_digital_pins = 24;
+const int max_analog_pins = 12;
+char pin_setup[max_digital_pins];
 
 void _clear_pin_setup() {
-  for (int pi = 0; pi < max_pins; pi++) {
+  for (int pi = 0; pi < max_digital_pins; pi++) {
     pin_setup[pi] = 0;
   }
 }
@@ -96,52 +99,106 @@ void _set_pin_mode(int pin, int mode) {
 
 }
 
-int listen_max = 0;
-int listen_digital[max_pins];  // notification <seq>
-int listen_value[max_pins];    // current value 
-int listen_debounce[max_pins]; // value for debounce
-long listen_debounce_millis;
-long listen_debounce_delta = 50;
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define ABS(a) ((a) > 0) ? (a) : -(a))
 
-void _listen_setup() {
-  for (int li = 0; li < max_pins; li++) {
-    listen_digital[li] = 0;
-    listen_value[li] = -1;
+long listen_debounce_millis;
+long listen_debounce_delta = 50;    // changes have to be stable this long
+
+// --- digital listen section
+
+int listen_digital_max = 0;
+int listen_digital_seq[max_digital_pins];  // notification <seq>
+int listen_digital_value[max_digital_pins];    // current value 
+int listen_digital_debounce[max_digital_pins]; // value for debounce
+
+void _listen_digital_setup() {
+  for (int pin = 0; pin < max_digital_pins; pin++) {
+    listen_digital_seq[pin] = 0;
+    listen_digital_value[pin] = -1;
   }
 }
-
-#define MAX(a,b) ((a) > (b) ? (a) : (b))
 
 void _listen_digital(int seq, int pin) {
   _set_pin_mode(pin, INPUT);
   
-  listen_max = MAX(listen_max, pin + 1);
-  listen_digital[pin] = seq;
-  listen_value[pin] = -1;
-  listen_debounce[pin] = -1;
+  listen_digital_max = MAX(listen_digital_max, pin + 1);
+  listen_digital_seq[pin] = seq;
+  listen_digital_value[pin] = -1;
+  listen_digital_debounce[pin] = -1;
 }
 
-void _listen_sweep() {
-  if (!listen_max) {
+void _listen_digital_sweep() {
+  if (!listen_digital_max) {
     return;
   }
   
-//  Serial.print("!sweep,\n");
-  
-  for (int li = 0; li < listen_max; li++) {
-    int dseq = listen_digital[li];
+  for (int pin = 0; pin < listen_digital_max; pin++) {
+    int dseq = listen_digital_seq[pin];
     if (dseq) {
-      int dvalue = digitalRead(li);
-      if (dvalue != listen_debounce[li]) {
+      int dvalue = digitalRead(pin);
+      if (dvalue != listen_digital_debounce[pin]) {
         listen_debounce_millis = millis();
-        listen_debounce[li] = dvalue;
+        listen_digital_debounce[pin] = dvalue;
       }
-      if ((dvalue != listen_value[li]) && ((millis() - listen_debounce_millis) > listen_debounce_delta)) {
-        listen_value[li] = dvalue;
+      if ((dvalue != listen_digital_value[pin]) && ((millis() - listen_debounce_millis) > listen_debounce_delta)) {
+        listen_digital_value[pin] = dvalue;
         
         Serial.print(dseq);
         Serial.print(",");
         Serial.print(dvalue);
+        Serial.print("\n");
+      }
+    }
+  }
+}
+
+// --- analog listen section
+
+long listen_analog_blur = 5;       // ignore analog changes smaller than this
+
+int listen_analog_max = 0;
+int listen_analog_seq[max_analog_pins];  // notification <seq>
+int listen_analog_value[max_analog_pins];    // current value 
+int listen_analog_debounce[max_analog_pins]; // value for debounce
+
+void _listen_analog_setup() {
+  for (int pin = 0; pin < max_analog_pins; pin++) {
+    listen_analog_seq[pin] = 0;
+    listen_analog_value[pin] = -1;
+  }
+}
+
+void _listen_analog(int seq, int pin) {
+  _set_pin_mode(pin, INPUT);
+  
+  listen_analog_max = MAX(listen_analog_max, pin + 1);
+  listen_analog_seq[pin] = seq;
+  listen_analog_value[pin] = -1;
+  listen_analog_debounce[pin] = -1;
+}
+
+void _listen_analog_sweep() {
+  if (!listen_analog_max) {
+    return;
+  }
+  
+  for (int pin = 0; pin < listen_analog_max; pin++) {
+    int aseq = listen_analog_seq[pin];
+    if (aseq) {
+      int avalue = analogRead(pin);
+      int adelta = ABS(avalue - listen_analog_debounce[pin])
+      if (adelta >= listen_analog_blur) {
+        listen_debounce_millis = millis();
+        listen_analog_debounce[pin] = avalue;
+      }
+      int adelta = ABS(avalue - listen_analog_value[pin])
+      if ((adelta >= listen_analog_blur) && ((millis() - listen_debounce_millis) > listen_debounce_delta)) {
+        listen_analog_value[pin] = avalue;
+        
+        Serial.print(aseq);
+        Serial.print(",");
+        Serial.print(avalue);
         Serial.print("\n");
       }
     }
@@ -155,7 +212,8 @@ void setup(){
   _serial_hello();
 
   _clear_pin_setup(); 
-  _listen_setup();
+  _listen_digital_setup();
+  _listen_analog_setup();
 }
 
 // ---------------------------------------- begin of loop() ----------------------------------------
@@ -184,9 +242,9 @@ static int  wave1 = 0; // oscilloscope addon for sqare wave generating
 static int  wave2 = 0; // oscilloscope addon for sqare wave generating
 
   if (!Serial.available()) { 
-    _listen_sweep();
+    _listen_digital_sweep();
+    _listen_analog_sweep();
   }
-
 
   loopCount++;
   loopTime = micros() - setupTime; // an empty loop with minimal testing code runs about at 90 khz
