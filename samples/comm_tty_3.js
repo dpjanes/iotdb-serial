@@ -11,7 +11,7 @@
 
 "use strict"
 
-var CommTTY = require("../clients/comm_tty").CommTTY
+var CommTTY = require("../client/comm_tty").CommTTY
 
 var comm = new CommTTY()
 

@@ -133,6 +133,14 @@ Comm.prototype.analog_write = function(pin, value) {
     })
 }
 
+Comm.prototype.analog_listen = function(pin, callback) {
+    this.send({
+        command: "AnalogListen",
+        pin: pin,
+        callback: callback
+    })
+}
+
 Comm.prototype.digital_write = function(pin, value) {
     this.send({
         command: "DigitalWrite",

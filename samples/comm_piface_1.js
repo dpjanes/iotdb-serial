@@ -12,7 +12,7 @@
 
 "use strict"
 
-var CommPiFace = require("../clients/comm_piface").CommPiFace
+var CommPiFace = require("../client/comm_piface").CommPiFace
 
 var comm = new CommPiFace()
 var BUTTON = 0

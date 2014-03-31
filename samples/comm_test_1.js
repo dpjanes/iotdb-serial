@@ -12,7 +12,7 @@
 
 "use strict"
 
-var CommTest = require("../clients/comm_test").CommTest
+var CommTest = require("../client/comm_test").CommTest
 
 var comm = new CommTest()
 

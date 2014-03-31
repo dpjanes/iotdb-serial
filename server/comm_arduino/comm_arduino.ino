@@ -100,7 +100,6 @@ void _set_pin_mode(int pin, int mode) {
 }
 
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
-#define ABS(a) ((a) > 0) ? (a) : -(a))
 
 long listen_debounce_millis;
 long listen_debounce_delta = 50;    // changes have to be stable this long
@@ -187,12 +186,12 @@ void _listen_analog_sweep() {
     int aseq = listen_analog_seq[pin];
     if (aseq) {
       int avalue = analogRead(pin);
-      int adelta = ABS(avalue - listen_analog_debounce[pin])
+      int adelta = abs(avalue - listen_analog_debounce[pin]);
       if (adelta >= listen_analog_blur) {
         listen_debounce_millis = millis();
         listen_analog_debounce[pin] = avalue;
       }
-      int adelta = ABS(avalue - listen_analog_value[pin])
+      adelta = abs(avalue - listen_analog_value[pin]);
       if ((adelta >= listen_analog_blur) && ((millis() - listen_debounce_millis) > listen_debounce_delta)) {
         listen_analog_value[pin] = avalue;
         
@@ -444,6 +443,10 @@ boolean        out = true;       // output flag
       inId.toCharArray(cArray,10);
       _listen_digital(atol(cArray), inArgLng[0]);
     }
+    else if (inFunction.equalsIgnoreCase("analogListen")) {
+      inId.toCharArray(cArray,10);
+      _listen_analog(atol(cArray), inArgLng[0]);
+    }
     else if (inFunction.equalsIgnoreCase("digitalRead")) {
       _set_pin_mode(inArgLng[0], INPUT);
       intValue = digitalRead(inArgLng[0]); // pin
@@ -566,7 +569,11 @@ boolean        out = true;       // output flag
       else if (inFunction.equalsIgnoreCase("myFunction")) { // myFunction
         Serial.print("my result is ...");
         Serial.print("\n");
-      } else if (inFunction.equalsIgnoreCase("digitalListen")) { // digitalRead value
+      } 
+      else if (inFunction.equalsIgnoreCase("digitalListen")) { // digitalRead value
+        Serial.print("\n"); 
+      }
+      else if (inFunction.equalsIgnoreCase("analogListen")) { // analogListen value
         Serial.print("\n"); 
       } else {
         Serial.print("-\n"); // if no value returns a -
