@@ -1,52 +1,21 @@
 /*
- *  NOTE: modified by David P Janes / IOTDB for iotdb-serial
+ *  comm_arduino.ino
  *
-Arduino Serial Protocol 1.6
-created November 18th 2012 by Roberto Valgolio
-last modified March 2014
-this example code is in the public domain
-any feedback will be appreciated, please write to roberto.valgolio@gmail.com
-
-The  program builds an ASCII protocol useful to activate the Arduino basic functions from a remote system or from a terminal like Putty or HyperTerminal.
-Arduino executes the requested function and returns the result that can be displayed or treated by the sender.
-Input and output messages are NL terminated.
-
-What'new:
-1.3 - April 2013
-•  Arduino answer message ends with NL instead CR+NL
-1.4 - October 2013
-•  code optimization useful for integration with other projects
-•  tested serial speed up to 115200
-1.5 - December 2013
-•  data sending in binary format, see Oscilloscope functions
-•  for other info search comments "oscilloscope addon"
-1.6 - March 2014
-•  csv data sending
-•  for other info search comments "csv addon"
-
-The protocol built in functions are:
-•  pinMode
-•  digitalRead
-•  digitalWrite
-•  analogRead
-•  analogWrite
-•  pulseIn
-•  tone
-•  noTone
-•  millis
-•  delay
-•  myFunction
-•  oscilloscopeOn
-•  oscilloscopeGo
-•  oscilloscopeOff
-•  csvOn
-•  csvOff
-Developers can add new functions to interact with their own sketch.
-
-The solution can be a ready to go software for many Arduino applications or a module to improve every sketch.
+ *  David Janes
+ *  IOTDB.org
+ *  2014-04-09
+ *
+ *  See COMMENTS.md for the origin of this file!
+ *  Originally by Roberto Valgolio / roberto.valgolio@gmail.com
  */
 
-// Serial Protocol
+// define this if you want to use the DHT temperature / sensor library
+#define USE_DHT
+
+#if defined(USE_DHT)
+#include <DHT.h>
+#endif
+
 String  inString = "";  // input string
 
 // oscilloscope addon
@@ -86,7 +55,11 @@ void _serial_setup() {
 }
 
 void _serial_hello() {
-  Serial.print("\n\n\n\n!hello,Arduino\n");
+  Serial.print("\n\n\n\n!hello,Arduino");
+#if defined(USE_DHT)
+  Serial.print("+DHT");
+#endif
+  Serial.print("\n");
 }
 
 void _set_pin_mode(int pin, int mode) {
@@ -204,6 +177,83 @@ void _listen_analog_sweep() {
   }
 }
 
+// --- temperature & humidity section
+#if defined(USE_DHT)
+DHT* dht = 0;
+int dht_type = DHT11;
+int dht_pin = 0;
+int dht_seq_temperature = -1;
+float dht_last_temperature = -999;
+int dht_seq_humidity = -1;
+float dht_last_humidity = -999;
+
+void _listen_dht_setup() {
+}
+
+void _listen_dht_sweep() {
+  if (!dht) {
+    return;
+  }
+  
+  if (dht_seq_humidity > -1) {
+    float humidity = dht->readHumidity();
+    if (humidity != dht_last_humidity) {
+      dht_last_humidity = humidity;
+      
+      Serial.print(dht_seq_humidity);
+      Serial.print(",");
+      Serial.print(dht_last_humidity);
+      Serial.print("\n");
+    }
+  }
+
+  if (dht_seq_temperature > -1) {
+    float temperature = dht->readTemperature();
+    if (temperature != dht_last_temperature) {
+      dht_last_temperature = temperature;
+      
+      Serial.print(dht_seq_temperature);
+      Serial.print(",");
+      Serial.print(dht_last_temperature);
+      Serial.print("\n");
+    }
+  }
+}
+
+DHT* _dht(int _dht_pin) {
+  if (dht == 0) {
+    dht_pin = A0;
+    dht = new DHT(dht_pin, dht_type);
+    dht->begin();
+  }
+  
+  return dht;
+}
+
+void _set_dht_type(int _dht_type) {
+  dht_type = _dht_type;
+}
+
+void _listen_dht_temperature(int seq, int _dht_pin) {
+  _dht(_dht_pin);
+  dht_seq_temperature = seq;
+}
+
+void _listen_dht_humidity(int seq, int _dht_pin) {
+  _dht(_dht_pin);
+  dht_seq_humidity = seq;
+}
+
+float _get_dht_temperature(int _dht_pin) {
+  return _dht(_dht_pin)->readTemperature();
+}
+
+float _get_dht_humidity(int _dht_pin) {
+  return _dht(_dht_pin)->readHumidity();
+}
+#endif
+
+
 // ---------------------------------------- setup() ----------------------------------------
 
 void setup(){
@@ -213,170 +263,33 @@ void setup(){
   _clear_pin_setup(); 
   _listen_digital_setup();
   _listen_analog_setup();
+#if defined(USE_DHT)
+  _listen_dht_setup();
+#endif
 }
 
 // ---------------------------------------- begin of loop() ----------------------------------------
+unsigned long mc = 0;
+int heartbeat_count = 0;
+
 void loop() {
-  
-static unsigned long  loopCount = 0;
-static unsigned long  setupTime = micros();
-static unsigned long  loopTime = 0;
-static unsigned long  Time1 = 0;
-static unsigned long  Time2 = 0;
-static unsigned long  Time3 = 0;
-static unsigned long  Time4 = 0;
-static unsigned long  Time5 = 0;
-static unsigned long  Time6 = 0;
-
-static int  i,j = 0;
-
-// oscilloscope addon
-static int  value;
-static int  valueLast;
-static int  valueCount;
-static bool window = false;
-static byte hiByte;
-static byte loByte;
-static int  wave1 = 0; // oscilloscope addon for sqare wave generating
-static int  wave2 = 0; // oscilloscope addon for sqare wave generating
-
   if (!Serial.available()) { 
     _listen_digital_sweep();
     _listen_analog_sweep();
+#if defined(USE_DHT)
+    _listen_dht_sweep();
+#endif
   }
-
-  loopCount++;
-  loopTime = micros() - setupTime; // an empty loop with minimal testing code runs about at 90 khz
   
-  if ((loopTime - Time1) >= oscResolution) { // measure timing
-    Time1 = loopTime;
-    // oscilloscope addon
-    // you can delete the following code if you aren't interested on Oscilloscope Function working with Excel
-    if (oscSwitch) { // if oscilloscope switch is on
-      value = analogRead(oscPin);
-      if (oscGo) { // if oscilloscope go is on
-        if (oscTrigger > 0 && window == false) { // if trigger is defined and window is off
-          if ((value - valueLast) >= oscTrigger) { // if a positive edge is detected
-            window = true;
-          }
-        }
-        if ((oscTrigger > 0 && window == true) || (oscTrigger == 0)) { // if (trigger id defined and window is on) or (trigger is undefined)
-          hiByte = (value >> 8) & 0xFF;
-          loByte = value & 0xFF;
-          Serial.write(loByte);
-          Serial.write(hiByte);
-          valueCount++;
-        }
-        if (valueCount > 99) { // if 100 values are sent
-          if (oscRepeat == false) { // if no repeating option
-            oscGo = false;
-          }
-          valueCount = 0;
-          window = false;
-        }
-      }
-      else { // oscilloscope go is off
-        valueCount = 0;
-        window = false;
-      }
-      valueLast = value;
-    }
-    else { // switch off
-      valueCount = 0;
-      window = false;
-    }
-  }
-
-/*    
-  // istructions executed each 8,333ms to perform a 60hz sqare wave
-  if ((loopTime - Time2) >= 8333) {
-    Time2 = loopTime;
-    if (wave1 == 0) {
-      wave1 = 1;
-    }
-    else {
-      wave1 = 0;
-    }
-    digitalWrite(6,wave1);
-  }
-
-  // istructions executed each 5ms to perform a 100hz sqare wave
-  if ((loopTime - Time3) >= 5000) {
-    Time3 = loopTime;
-    if (wave2 == 0) {
-      wave2 = 1;
-    }
-    else {
-      wave2 = 0;
-    }
-    digitalWrite(7,wave2);
-  }
-*/
-
-  // csv addon
-  // you can delete the following code if you aren't interested on csv data sending
-  if ((loopTime - Time4) >= (csvFrequency * 1000000)) {
-    Time4 = loopTime;
-    if (csvSwitch) {
-      // the output format to Excel is:
-      // XLS,CellName,Index,Value
-      // where:
-      //   'XLS' is a constant keyword for messages to Excel
-      //   'CellName' is a keyword that specifies the cells(s) name where info will be allocated in
-      //   'Index specifies the item (forced to zero for simple variables)
-      //   'Value' is the info value 
-      // messages are \n terminated
-      // use Arduino Excel Commander of the same author for messages reading and info real time representing
-      // example 1
-      // the following info will be placed in a cell VAR1 named
-      Serial.print("XLS,VAR1,");
-      Serial.print("0"); // while we are sending a simple variable index is forced to zero
-      Serial.print(",");
-      Serial.print(analogRead(0)); // only for example, put here your variable
-      Serial.print("\n");
-      // example 2
-      // the following info will be placed in a cell VAR2 named
-      Serial.print("XLS,VAR2,");
-      Serial.print("0"); // while we are sending a simple variable index is forced to zero
-      Serial.print(",");
-      Serial.print(analogRead(1)); // only for example, put here your variable
-      Serial.print("\n");
-      // example 3
-      // the following info will be placed in a cell VAR3 named
-      Serial.print("XLS,VAR3,");
-      Serial.print("0"); // while we are sending a simple variable index is forced to zero
-      Serial.print(",");
-      Serial.print(analogRead(2)); // only for example, put here your variable
-      Serial.print("\n");
-      // example 4
-      // the following info will be placed at i position of a cell group named ARR1
-      Serial.print("XLS,ARR1,");
-      Serial.print(csvIndex); // only for example, put here your index
-      Serial.print(",");
-      Serial.print(random(0, 100)); // only for example, put here your variable
-      Serial.print("\n");
-      csvIndex++;
-    }
-  }
-/*    
-  // istructions executed each 1 s
-  if ((loopTime - Time6) >= 1000000) {
-    Time6 = loopTime;
-    // loop performance check
-    // about 90 khz with a empty loop
-    // note that due architecture with timers loop performances are quite stable
-    Serial.print("LoopRate");
-    Serial.print(",");
-    Serial.print(((float)loopCount / (float)loopTime * (float)1000000),0);
-    Serial.print(",");
-    Serial.print(((float)loopTime / (float)loopCount / 1000),3);
-    Serial.print(",");
-    Serial.print(diff);
+  unsigned long m = millis();
+  unsigned long d = m - mc;
+  if (d > (30 * 1000)) {
+    mc = m;
+    Serial.print("!,Heartbeat,");
+    Serial.print(heartbeat_count++);
     Serial.print("\n");
   }
-*/    
-  
-} // ---------------------------------------- end of loop() ----------------------------------------
+} 
 
 // this function is automatically called each loop if somewhat is present in the RX buffer
 void serialEvent() {
@@ -393,7 +306,12 @@ float          inArgFlo[4];      // up to 4 args from inString
 int            arg = 0;          // args index
 int            intValue;         // return value
 unsigned long  ulongValue;       // return value
+float          floatValue;
 boolean        out = true;       // output flag
+boolean        out_dash = false;  // output flag
+boolean        out_intValue = false;  // output flag
+boolean        out_ulongValue = false;  // output flag
+boolean        out_floatValue = false;  // output flag
 
  
   // line extraction
@@ -442,22 +360,58 @@ boolean        out = true;       // output flag
     else if (inFunction.equalsIgnoreCase("digitalListen")) {
       inId.toCharArray(cArray,10);
       _listen_digital(atol(cArray), inArgLng[0]);
+      out_dash = false;
     }
     else if (inFunction.equalsIgnoreCase("analogListen")) {
       inId.toCharArray(cArray,10);
       _listen_analog(atol(cArray), inArgLng[0]);
+      out_dash = false;
     }
     else if (inFunction.equalsIgnoreCase("digitalRead")) {
       _set_pin_mode(inArgLng[0], INPUT);
       intValue = digitalRead(inArgLng[0]); // pin
+      out_intValue = true;
     }
     else if (inFunction.equalsIgnoreCase("digitalWrite")) {
       _set_pin_mode(inArgLng[0], OUTPUT);
       digitalWrite(inArgLng[0], inArgLng[1] ? HIGH : LOW); // pin,value
     }
+#if defined(USE_DHT)
+    else if (inFunction.equalsIgnoreCase("DHT11")) {
+      inId.toCharArray(cArray,10);
+      _set_dht_type(DHT11);
+    }
+    else if (inFunction.equalsIgnoreCase("DHT21")) {
+      inId.toCharArray(cArray,10);
+      _set_dht_type(DHT21);
+    }
+    else if (inFunction.equalsIgnoreCase("DHT22")) {
+      inId.toCharArray(cArray,10);
+      _set_dht_type(DHT22);
+    }
+    else if (inFunction.equalsIgnoreCase("temperatureListen")) {
+      inId.toCharArray(cArray,10);
+      _listen_dht_temperature(atol(cArray), inArgLng[0]);
+      out_dash = false;
+    }
+    else if (inFunction.equalsIgnoreCase("humidityListen")) {
+      inId.toCharArray(cArray,10);
+      _listen_dht_humidity(atol(cArray), inArgLng[0]);
+      out_dash = false;
+    }
+    else if (inFunction.equalsIgnoreCase("temperatureRead")) {
+      floatValue = _get_dht_temperature(inArgLng[0]);
+      out_floatValue = true;
+    }
+    else if (inFunction.equalsIgnoreCase("humidityRead")) {
+      floatValue = _get_dht_humidity(inArgLng[0]);
+      out_floatValue = true;
+    }
+#endif
     else if (inFunction.equalsIgnoreCase("analogRead")) {
       _set_pin_mode(inArgLng[0], INPUT);
       intValue = analogRead(inArgLng[0]); // pin
+      out_intValue = true;
     }
     else if (inFunction.equalsIgnoreCase("analogWrite")) {
       _set_pin_mode(inArgLng[0], OUTPUT);
@@ -465,6 +419,7 @@ boolean        out = true;       // output flag
     }
     else if (inFunction.equalsIgnoreCase("pulseIn")) {
       ulongValue = pulseIn(inArgLng[0], inArgLng[1], inArgLng[2]); // pin,mode,timeout
+      out_ulongValue = true;
     }
     else if (inFunction.equalsIgnoreCase("tone")) {
       tone(inArgLng[0], (int)inArgLng[1]); // pin,frequency
@@ -477,66 +432,7 @@ boolean        out = true;       // output flag
     }
     else if (inFunction.equalsIgnoreCase("delay")) {
       delay(inArgLng[0]); // milliseconds
-    }
-    else if (inFunction.equalsIgnoreCase("myFunction")) {
-      // while personalizing be careful on argument type
-    }
-    else if (inFunction.equalsIgnoreCase("oscilloscopeOn")) {    // oscilloscope addon
-      oscPin = inArgLng[0];
-      oscResolution = inArgLng[1] * 1000; // millisecond value converted in microsecond
-      oscTrigger = inArgLng[2];
-      oscSwitch = true;
-      oscGo = false;
-      out = false;
-      csvSwitch = false;
-   }
-    else if (inFunction.equalsIgnoreCase("oscilloscopeGo")) {    // oscilloscope addon
-      if (inArgLng[0] == 0) {
-        oscRepeat = false;
-      }
-      else {
-        oscRepeat = true;
-      }
-      oscGo = true;
-      out = false;
-    }
-    else if (inFunction.equalsIgnoreCase("oscilloscopeOff")) {    // oscilloscope addon
-      oscSwitch = false;
-      oscGo = false;
-      out = false;
-    }
-    else if (inFunction.equalsIgnoreCase("csvOn")) {    // csv addon
-      csvSwitch = true;
-      csvFrequency = inArgLng[0]; // sending frequency
-      csvIndex = 0;
-    }
-    else if (inFunction.equalsIgnoreCase("csvOff")) {    // csv addon
-      csvSwitch = false;
-    }
-    else if (inId == "?" || inFunction == "?") {
-      Serial.print(F("\n"));
-      Serial.print(F("Arduino Serial Protocol 1.6\n"));
-      Serial.print(F("command format: id,function[,arg1][,arg2][,arg3] (id: sender id string)\n"));
-      Serial.print(F("functions are:\n"));
-      Serial.print(F("  pinMode,pin,mode (mode: 0 for INPUT, 2 for INPUT_PULLUP, 1 for OUTPUT)\n"));
-      Serial.print(F("  digitalRead,pin\n"));
-      Serial.print(F("  digitalWrite,pin,value (value: 0 for LOW, 1 for HIGH)\n"));
-      Serial.print(F("  analogRead,pin\n"));
-      Serial.print(F("  analogWrite,pin,dutycycle (dutycycle: between 0 always off and 255 always on)\n"));
-      Serial.print(F("  pulseIn,pin,mode,timeout (mode: 0 for LOW, 1 for HIGH) (timeout unit: microseconds)\n"));
-      Serial.print(F("  tone,pin,frequency (frequency: between 31 to 65535)\n"));
-      Serial.print(F("  noTone,pin\n"));
-      Serial.print(F("  millis\n"));
-      Serial.print(F("  delay,milliseconds\n"));
-      Serial.print(F("  myFunction\n"));
-      Serial.print(F("  oscilloscopeOn,pin,resolution,trigger (resolution: between 1 and 4294966) (resolution unit: milliseconds) (trigger:  between 0 no trigger to 1023)\n"));
-      Serial.print(F("  oscilloscopeGo,repeat (repeat: 0 for OFF 1 for ON\n"));
-      Serial.print(F("  oscilloscopeOff\n"));
-      Serial.print(F("  csvOn,frequency (frequency unit: seconds)\n"));
-      Serial.print(F("  csvOff\n"));
-      Serial.print(F("function use: see http://arduino.cc/en/Reference/HomePage\n"));
-      Serial.print(F("\n"));
-      out = false;
+      out_ulongValue = true;
     }
     else if (inFunction == "") {
       out = false;
@@ -545,39 +441,21 @@ boolean        out = true;       // output flag
       Serial.print("error,unknown command\n");
       out = false;
     }
+
     if (out) { // output management
       // the format of the answer is: id,- or id,value
       Serial.print(inId); // returns the sender id
       Serial.print(",");
-      // you can delete the code about unused functions
-      if (inFunction.equalsIgnoreCase("digitalRead")) { // digitalRead value
+      if (out_intValue) {
         Serial.print(intValue);
-        Serial.print("\n");
-      }
-      else if (inFunction.equalsIgnoreCase("analogRead")) { // analogRead value
-        Serial.print(intValue);
-        Serial.print("\n");
-      }
-      else if (inFunction.equalsIgnoreCase("pulseIn")) { // pulseIn value
+      } else if (out_ulongValue) {
         Serial.print(ulongValue);
-        Serial.print("\n");
+      } else if (out_floatValue) {
+        Serial.print(floatValue);
+      } else if (out_dash) {
+        Serial.print("-");
       }
-      else if (inFunction.equalsIgnoreCase("millis")) { // millis value
-        Serial.print(ulongValue);
-        Serial.print("\n");
-      }
-      else if (inFunction.equalsIgnoreCase("myFunction")) { // myFunction
-        Serial.print("my result is ...");
-        Serial.print("\n");
-      } 
-      else if (inFunction.equalsIgnoreCase("digitalListen")) { // digitalRead value
-        Serial.print("\n"); 
-      }
-      else if (inFunction.equalsIgnoreCase("analogListen")) { // analogListen value
-        Serial.print("\n"); 
-      } else {
-        Serial.print("-\n"); // if no value returns a -
-      }
+      Serial.print("\n"); 
     }
   }
 }
